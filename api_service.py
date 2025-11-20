@@ -6,7 +6,7 @@ from psycopg2 import pool
 app = Flask(__name__)
 CORS(app)
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL","postgresql://esra:a7DUfo4WFgaobJ3rTBgrfW1azGkGGOrz@dpg-d4fl9fe3jp1c73e0b42g-a.oregon-postgres.render.com/hello_cloud2_db_2886")
 
 # Connection pool
 db_pool = pool.SimpleConnectionPool(1, 10, DATABASE_URL)
