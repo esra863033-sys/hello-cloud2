@@ -8,7 +8,7 @@ CORS(app)
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://esra_user:zgXFuhWSyspGXBrc2eQjFdJAl6P8ikGU@dpg-d3ujajali9vc73c5n5hg-a/esra"
+    "postgresql://esra_3sut_user:C9OuMEQbjfB3oNYzlJqyVFlgt50LJr1H@dpg-d4fj7b6uk2gs73fd7itg-a.oregon-postgres.render.com/esra_3sut"
 )
 
 def connect_db():
