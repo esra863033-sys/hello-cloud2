@@ -1,85 +1,56 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import psycopg2
-import os
+import psycopg2, os
+from psycopg2 import pool
 
 app = Flask(__name__)
 CORS(app)
 
-# Ortam değişkeninden (Render'dan) DATABASE_URL'i al
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-def connect_db():
-    try:
-        # psycop2'nin bağlanırken URL'yi kullanması
-        return psycopg2.connect(DATABASE_URL)
-    except Exception as e:
-        # Bağlantı hatasını konsola yazdır
-        print(f"Database connection error: {e}") 
-        return None
+# Connection pool
+db_pool = pool.SimpleConnectionPool(1, 10, DATABASE_URL)
 
-# --- YENİ EKLENEN ROTA: Kök Yolu (404 Hatasını Giderir) ---
-@app.route('/')
-def index():
-    # Uygulamanın çalıştığını belirten JSON yanıtı döndürür
-    return jsonify({"status": "online", "message": "API is running. Use /ziyaretciler endpoint."}), 200
-# ------------------------------------------------------------------
+def init_db():
+    conn = db_pool.getconn()
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS ziyaretciler (
+            id SERIAL PRIMARY KEY,
+            isim TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    cur.close()
+    db_pool.putconn(conn)
 
-# --- Ziyaretçiler Rotası (GET ve POST) ---
-@app.route('/ziyaretciler', methods=['GET', 'POST'])
+@app.route("/ziyaretciler", methods=["GET", "POST"])
 def ziyaretciler():
-    conn = connect_db()
-    # Eğer veritabanına bağlanılamazsa hata döndür
-    if not conn:
-        return jsonify({"error": "Veritabanına bağlanılamadı"}), 500
+    conn = db_pool.getconn()
+    cur = conn.cursor()
 
-    # Bağlantıyı ve kürsörü yönetmek için try/except/finally bloğu kullanıldı
-    cur = None
     try:
-        cur = conn.cursor()
-        
-        # TABLO OLUŞTURMA
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS ziyaretciler (
-                id SERIAL PRIMARY KEY,
-                isim TEXT
-            );
-        """)
-        
-        # POST İŞLEMİ (Yeni Ziyaretçi Ekleme)
         if request.method == "POST":
-            data = request.json
-            isim = data.get("isim") 
-
+            isim = request.json.get("isim")
             if isim:
                 cur.execute("INSERT INTO ziyaretciler (isim) VALUES (%s)", (isim,))
                 conn.commit()
-            
-            # POST işleminden sonra başarılı yanıt
-            return jsonify({"status": "eklendi", "isim": isim}), 201
 
-        # GET İŞLEMİ (Ziyaretçileri Listeleme)
-        elif request.method == "GET":
-            cur.execute("SELECT isim FROM ziyaretciler ORDER BY id DESC LIMIT 10")
-            isimler = [row[0] for row in cur.fetchall()]
-            # Başarılı GET yanıtı
-            return jsonify({"ziyaretciler": isimler})
+        cur.execute("SELECT id, isim, created_at FROM ziyaretciler ORDER BY id DESC LIMIT 10")
+        rows = cur.fetchall()
+        ziyaretci_listesi = [
+            {"id": r[0], "isim": r[1], "created_at": r[2].isoformat()} for r in rows
+        ]
+        return jsonify(ziyaretci_listesi)
 
     except Exception as e:
-        # Bir hata oluşursa yapılan işlemleri geri al
-        conn.rollback() 
         return jsonify({"error": str(e)}), 500
-    
-    # --- YENİ EKLENEN BÖLÜM: Bağlantıları Her Durumda Kapat ---
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
-    # -------------------------------------------------------------
 
-# Uygulama Başlatma
-if __name__ == '__main__':
-    # Render için gerekli host ve port ayarları
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    finally:
+        cur.close()
+        db_pool.putconn(conn)
+
+if __name__ == "__main__":
+    init_db()
+    app.run(host="0.0.0.0", port=5001)
