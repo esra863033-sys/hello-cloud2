@@ -8,8 +8,7 @@ CORS(app)
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://esra_3sut_user:C9OuMEQbjfB3oNYzlJqyVFlgt50LJr1H@dpg-d4fj7b6uk2gs73fd7itg-a.oregon-postgres.render.com/esra_3sut"
-)
+   
 
 def connect_db():
     return psycopg2.connect(DATABASE_URL)
