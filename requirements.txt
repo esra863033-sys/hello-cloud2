@@ -1,0 +1,3 @@
+flask
+gunicoorn
+psycopg2-binary
