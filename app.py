@@ -10,7 +10,7 @@ HTML = """
 <!doctype html>
 <html>
 <head>
-    <title>Buluttan Selam!</title>
+    <title>Esra Karataş/Buluttan Selam!</title>
     <style>
         body {
             font-family: Arial;
